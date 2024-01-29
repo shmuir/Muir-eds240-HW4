@@ -1,0 +1,28 @@
+---
+title: "HW2-exploration"
+author: "Sam Muir"
+format: html
+---
+
+```{r}
+library(metajam) 
+library(tidyverse)
+```
+
+```{r}
+#...................download data from DataOne...................
+download_d1_data_pkg("https://gmn.lternet.edu/mn/v2/packages/application%2Fbagit-097/doi%3A10.6073%2Fpasta%2F9746c71b35e9f8c544ea12c601c33949", path = here::here("data")) 
+
+#  ~ NOTE: I recommend renaming the downloaded folder to 'data/' so that it's ignored by .gitignore! ~
+
+#....................read in downloaded files....................
+animals_all <- read_d1_files(here::here("data", "animals"))
+biomass_all <- read_d1_files(here::here("data", "biomass"))
+vegetation_all <- read_d1_files(here::here("data", "vegetation"))
+stemheight_all <- read_d1_files(here::here("data", "stemheight"))
+
+#........................get the data file.......................
+animals <- animals_all$data[-c(1,2,3,4)]
+  
+```
+
