@@ -7,6 +7,7 @@ format: html
 ```{r}
 library(metajam) 
 library(tidyverse)
+library(janitor)
 ```
 
 ```{r}
@@ -22,7 +23,41 @@ vegetation_all <- read_d1_files(here::here("data", "vegetation"))
 stemheight_all <- read_d1_files(here::here("data", "stemheight"))
 
 #........................get the data file.......................
-animals <- animals_all$data[-c(1,2,3,4)]
+# the data was formatted very weirdly with a few different column headers, so first 2 rows needed to be not read in (skip = 2), the third row was the correct column header, and then there were 2 more rows after that which were other info on the data types, so they were removed as well [-c(1,2),]
+
+animals <- read_csv("data/animals/PLT-GCEM-1610_Animals_9_0.CSV", skip = 2)[-c(1,2),]
+biomass <- read_csv("data/biomass/PLT-GCEM-1610_Biomass_10_0.CSV", skip = 2)[-c(1,2),]
+vegetation <- read_csv("data/vegetation/PLT-GCEM-1610_Vegetation_9_0.CSV", skip = 2)[-c(1,2),]
+stemheight <- read_csv("data/stemheight/PLT-GCEM-1610_StemHeight_10_0.CSV", skip = 2)[-c(1,2),]
+```
+
+```{r}
+# data cleaning 
+# but now after all of the wrangling to get the data read in right, all of the colums are classified as character...
+
+animals_clean <- animals %>%
+  clean_names() %>%
+  mutate_at(c("latitude", "longitude", "littoraria_count"), as.numeric) %>%
+  mutate_at(c("grasshopper_abundance_index", "prokelisia_abundance_index", "littoraria_quadrat_area", "plot_number", "spartina_zone"), as.factor) %>%
+  mutate(date = lubridate::as_date(date))
+
+biomass_clean <- biomass %>%
+  clean_names() %>%
+  mutate_at(c("biomass_aboveground_green", "biomass_aboveground_brown", "biomass_aboveground_total", "biomass_belowground_0to10cm", "biomass_belowground_10to30cm", "biomass_belowground_total", "rhizomes_0to10cm", "root_to_shoot_ratio"), as.numeric) %>%
+  mutate_at(c("spartina_zone", "replicate"), as.factor) %>%
+  mutate(date = lubridate::as_date(date))
+
+vegetation_clean <- vegetation %>%
+  clean_names() %>%
+  mutate_at(c("latitude", "longitude", "plant_height"), as.numeric) %>%
+  mutate_at(c("spartina_zone", "plot_number", "quadrat_area", "flowering_status"), as.factor) %>%
+  mutate(date = lubridate::as_date(date))
+
+stemheight_clean <- stemheight %>%
+  clean_names() %>%
+  mutate_at(c("spartina_zone"), as.factor) %>%
+  mutate_at(c("core_number", "stem_number", "stem_height"), as.numeric) %>%
+  mutate(date = lubridate::as_date(date))
   
 ```
 
