@@ -4,13 +4,14 @@ author: "Sam Muir"
 format: html
 ---
 
-```{r}
+```{r, libraries}
+# libraries
 library(metajam) 
 library(tidyverse)
 library(janitor)
 ```
 
-```{r}
+```{r, read data}
 #...................download data from DataOne...................
 download_d1_data_pkg("https://gmn.lternet.edu/mn/v2/packages/application%2Fbagit-097/doi%3A10.6073%2Fpasta%2F9746c71b35e9f8c544ea12c601c33949", path = here::here("data")) 
 
@@ -31,7 +32,7 @@ vegetation <- read_csv("data/vegetation/PLT-GCEM-1610_Vegetation_9_0.CSV", skip 
 stemheight <- read_csv("data/stemheight/PLT-GCEM-1610_StemHeight_10_0.CSV", skip = 2)[-c(1,2),]
 ```
 
-```{r}
+```{r, data cleaning}
 # data cleaning 
 # but now after all of the wrangling to get the data read in right, all of the colums are classified as character...
 
@@ -58,6 +59,50 @@ stemheight_clean <- stemheight %>%
   mutate_at(c("spartina_zone"), as.factor) %>%
   mutate_at(c("core_number", "stem_number", "stem_height"), as.numeric) %>%
   mutate(date = lubridate::as_date(date))
-  
+
+## maybe there was a better way to do all of this? but seems like good practice either way 
 ```
+
+```{r}
+stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-to-many") %>%
+  mutate(year = as.factor(year(date)),
+         month = as.factor(month(date))) %>%
+  full_join(biomass_clean)
+```
+
+
+## exploratory data viz
+
+**initial question:** how do stem height and biomass relate to the abundance of invertebrate populations
+
+```{r}
+ggplot(animals_clean, aes(x = plot_number, y = littoraria_count)) +
+  geom_col()
+
+ggplot(animals_clean, aes(x = littoraria_count)) +
+  geom_histogram()
+
+ggplot(stemheight_clean, aes(x = stem_height)) +
+  geom_histogram()
+
+ggplot(stem_animals, aes(x = stem_height, y = littoraria_count)) +
+  geom_point() +
+  facet_wrap(~spartina_zone)
+
+ggplot(stem_animals, aes(x = year, y = littoraria_count, fill = spartina_zone)) +
+  geom_col(position = position_dodge())
+
+ggplot(stem_animals, aes(x = biomass_aboveground_total, y = littoraria_count)) +
+  geom_point() + 
+  facet_wrap(~spartina_zone)
+
+ggplot(stem_animals, aes(x = biomass_aboveground_total, y = littoraria_count)) +
+  geom_hex() +
+  scale_fill_viridis_c()
+```
+
+
+
+
+
 
