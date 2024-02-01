@@ -4,6 +4,8 @@ author: "Sam Muir"
 format: html
 ---
 
+# Part 2a.
+
 ```{r, libraries}
 # libraries
 library(metajam) 
@@ -14,8 +16,6 @@ library(janitor)
 ```{r, read data}
 #...................download data from DataOne...................
 download_d1_data_pkg("https://gmn.lternet.edu/mn/v2/packages/application%2Fbagit-097/doi%3A10.6073%2Fpasta%2F9746c71b35e9f8c544ea12c601c33949", path = here::here("data")) 
-
-#  ~ NOTE: I recommend renaming the downloaded folder to 'data/' so that it's ignored by .gitignore! ~
 
 #....................read in downloaded files....................
 animals_all <- read_d1_files(here::here("data", "animals"))
@@ -34,7 +34,7 @@ stemheight <- read_csv("data/stemheight/PLT-GCEM-1610_StemHeight_10_0.CSV", skip
 
 ```{r, data cleaning}
 # data cleaning 
-# but now after all of the wrangling to get the data read in right, all of the colums are classified as character...
+# but now after all of the wrangling to get the data read in right, all of the columns are classified as characters...
 
 animals_clean <- animals %>%
   clean_names() %>%
@@ -52,7 +52,8 @@ vegetation_clean <- vegetation %>%
   clean_names() %>%
   mutate_at(c("latitude", "longitude", "plant_height"), as.numeric) %>%
   mutate_at(c("spartina_zone", "plot_number", "quadrat_area", "flowering_status"), as.factor) %>%
-  mutate(date = lubridate::as_date(date))
+  mutate(date = lubridate::as_date(date),
+         year = as.factor(year(date)))
 
 stemheight_clean <- stemheight %>%
   clean_names() %>%
@@ -64,6 +65,7 @@ stemheight_clean <- stemheight %>%
 ```
 
 ```{r}
+# joining some of the data frames
 stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-to-many") %>%
   mutate(year = as.factor(year(date)),
          month = as.factor(month(date))) %>%
@@ -73,12 +75,12 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 
 ## exploratory data viz
 
-**initial question:** how do littoraria counts change over time and how do they vary over different spartina zones?
+**initial question:** 
+- how do littoraria counts change over time and how do they vary over different spartina zones?
+- how does biomass vary over time?
 
 ```{r}
-ggplot(animals_clean, aes(x = plot_number, y = littoraria_count)) +
-  geom_col()
-
+# exploratory data viz
 ggplot(animals_clean, aes(x = littoraria_count)) +
   geom_histogram()
 
@@ -89,23 +91,47 @@ ggplot(stem_animals, aes(x = stem_height, y = littoraria_count)) +
   geom_point() +
   facet_wrap(~spartina_zone)
 
-ggplot(stem_animals, aes(x = biomass_aboveground_total, y = littoraria_count)) +
-  geom_point() + 
+vegetation_clean %>%
+  group_by(spartina_zone, flowering_status, year) %>%
+  summarise(count = n()) %>%
+  ggplot(., aes(x = year, y = count, fill = flowering_status)) +
+  geom_col(position = "dodge") +
   facet_wrap(~spartina_zone)
-
-ggplot(stem_animals, aes(x = biomass_aboveground_total, y = littoraria_count)) +
-  geom_hex() +
-  scale_fill_viridis_c()
 ```
-
 
 ```{r}
+# general plots I'm interested in improving on
 ggplot(stem_animals, aes(x = year, y = littoraria_count, fill = spartina_zone)) +
-  geom_col(position = position_dodge()) +
+  geom_col(position = 'dodge') +
   facet_wrap(~spartina_zone) +
-  theme_light() +
+  theme_linedraw() +
   scale_fill_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
+
+ggplot(stem_animals, aes(x = date, y = littoraria_count, color = spartina_zone)) +
+  geom_line() +
+  facet_wrap(~spartina_zone, ncol = 1) +
+  theme_linedraw() +
+  scale_color_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
+
+ggplot(biomass_clean, aes(x = date, y = biomass_aboveground_total, color = spartina_zone)) +
+  geom_line() +
+  facet_wrap(~spartina_zone, ncol = 1) +
+  scale_color_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
+
+ggplot(stem_animals, aes(x = date, y = littoraria_count, color = spartina_zone)) +
+  geom_line() +
+  facet_wrap(~spartina_zone, ncol = 1) +
+  scale_color_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
 ```
 
+## Part 2b.
 
+1.
+The thing I found interesting (but now thinking about it makes sense) is that there is a lot of 0s for the *littoraria* counts. I did also not expect the other animals counts to be binary (0 not present, 1 present) and I'm not sure the best way to visualize binary data like this. From looking at some of my exploratory visualizations, I can see there are differences in *littoraria* counts across different *spartina* zones (short, medium, and tall). For short and tall there also seems to be a general decrease in *littoraria* counts over time, but for medium zones, there is not a clear pattern. I also learned that there were a lot more instances of plants not flowering rather than flowering. From exploring the data, I think I am more interested in exploring the *littoraria* counts.
+
+2. 
+Yes and no. I think that now seeing how the data types, I am wanting to shift my question(s) to how *littoraria* counts vary by *spartina* zone overtime and above ground biomass over time. I think it would be difficult to mix continuous counts and binary occurrences. For the line plots over time that I have made above, I am thinking that instead of plotting date or just year on the x-axis, it might be better to plot month or month-year. It looks like that data was collected in each month over the survey years, but not on a consistent date. I would think that there would be some kind of seasonal effect, so it could be more interesting to see how these counts/ measurements vary month to month rather than year to year. With adjusting my questions a bit, I am happy with the initial visualizations here and I don't think that I need any more data. I still think that looking at the data spatially would be interesting as well since there are coordinates for each sample, but this might not be necessary for the questions I'm interested in.
+
+3. 
+One of the bog challenges with the data was getting it read in correctly. It had a lot of different rows before the actual data began that was information about the collection and data types. This made it hard to read in correctly. Another challenge will be deciding what variables are most important to compare to each other and how to present that (ie. a visualization that makes it easier to compare counts by zone or a viz that makes it easier to compare counts over time). If I want to summarize counts by month for each year, I will need to take some time to get everything wrangled and clean for that. Plotting the points by the coordinates will also take some data wrangling.  
 
