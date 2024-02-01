@@ -73,7 +73,7 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 
 ## exploratory data viz
 
-**initial question:** how do stem height and biomass relate to the abundance of invertebrate populations
+**initial question:** how do littoraria counts change over time and how do they vary over different spartina zones?
 
 ```{r}
 ggplot(animals_clean, aes(x = plot_number, y = littoraria_count)) +
@@ -89,9 +89,6 @@ ggplot(stem_animals, aes(x = stem_height, y = littoraria_count)) +
   geom_point() +
   facet_wrap(~spartina_zone)
 
-ggplot(stem_animals, aes(x = year, y = littoraria_count, fill = spartina_zone)) +
-  geom_col(position = position_dodge())
-
 ggplot(stem_animals, aes(x = biomass_aboveground_total, y = littoraria_count)) +
   geom_point() + 
   facet_wrap(~spartina_zone)
@@ -102,7 +99,13 @@ ggplot(stem_animals, aes(x = biomass_aboveground_total, y = littoraria_count)) +
 ```
 
 
-
+```{r}
+ggplot(stem_animals, aes(x = year, y = littoraria_count, fill = spartina_zone)) +
+  geom_col(position = position_dodge()) +
+  facet_wrap(~spartina_zone) +
+  theme_light() +
+  scale_fill_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
+```
 
 
 
