@@ -49,3 +49,5 @@ po/*~
 rsconnect/
 
 data/
+HW2-exploration_files/
+*.html
