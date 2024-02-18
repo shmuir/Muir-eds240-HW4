@@ -1,0 +1,149 @@
+---
+title: "HW3-plotting"
+author: "Sam Muir"
+date: 2024-03-02
+format:
+  html:
+    embed-resources: true
+---
+
+# Part 2a.
+
+```{r, libraries, message=FALSE}
+# libraries
+library(tidyverse)
+library(janitor)
+library(ggtern)
+library(sf)
+```
+
+```{r}
+animals <- read_csv("data/animals/PLT-GCEM-1610_Animals_9_0.CSV", skip = 2)[-c(1,2),]
+biomass <- read_csv("data/biomass/PLT-GCEM-1610_Biomass_10_0.CSV", skip = 2)[-c(1,2),]
+vegetation <- read_csv("data/vegetation/PLT-GCEM-1610_Vegetation_9_0.CSV", skip = 2)[-c(1,2),]
+stemheight <- read_csv("data/stemheight/PLT-GCEM-1610_StemHeight_10_0.CSV", skip = 2)[-c(1,2),]
+```
+
+```{r, data cleaning, warning=FALSE, message=FALSE}
+# data cleaning 
+
+animals_clean <- animals %>%
+  clean_names() %>%
+  mutate_at(c("latitude", "longitude", "littoraria_count"), as.numeric) %>% # change cols to numeric
+  mutate_at(c("grasshopper_abundance_index", "prokelisia_abundance_index", "littoraria_quadrat_area", "plot_number", "spartina_zone"), as.factor) %>% # change cols to factor
+  mutate(date = lubridate::as_date(date)) # change date to a date
+
+biomass_clean <- biomass %>%
+  clean_names() %>%
+  mutate_at(c("biomass_aboveground_green", "biomass_aboveground_brown", "biomass_aboveground_total", "biomass_belowground_0to10cm", "biomass_belowground_10to30cm", "biomass_belowground_total", "rhizomes_0to10cm", "root_to_shoot_ratio"), as.numeric) %>% # change cols to numeric
+  mutate_at(c("spartina_zone", "replicate"), as.factor) %>% # change cols to factor
+  mutate(date = lubridate::as_date(date)) # change date to a date
+
+vegetation_clean <- vegetation %>%
+  clean_names() %>%
+  mutate_at(c("latitude", "longitude", "plant_height"), as.numeric) %>% # change cols to numeric
+  mutate_at(c("spartina_zone", "plot_number", "quadrat_area", "flowering_status"), as.factor) %>% # change cols to factor
+  mutate(date = lubridate::as_date(date), # change date to a date
+         year = as.factor(year(date))) # get the year from the date, change to a factor
+
+stemheight_clean <- stemheight %>%
+  clean_names() %>%
+  mutate_at(c("spartina_zone"), as.factor) %>% # change cols to factor
+  mutate_at(c("core_number", "stem_number", "stem_height"), as.numeric) %>% # change cols to numeric
+  mutate(date = lubridate::as_date(date))
+
+## maybe there was a better way to do all of this? but seems like good practice either way 
+
+# joining some of the data frames
+stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-to-many") %>% # join animals and stemheight
+  mutate(year = as.factor(year(date)), # get year from the date
+         month = as.factor(month(date))) %>% # get month from the date
+  full_join(biomass_clean)
+```
+
+```{r}
+# line plot for counts over the years
+stem_animals %>%
+  group_by(year) %>%
+  summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>%
+  drop_na(year) %>%
+  filter(year != 2013) %>%
+ggplot(., aes(x = year, y = counts, group = 1)) +
+  geom_point(color = "darkgreen") +
+  geom_line(color = "darkgreen") +
+  theme_bw() +
+  labs(x = "Year", y = expression(paste("# of ", italic("Littoraria")))) +
+  theme_minimal(base_family = "fira condensed") +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(margin = margin(r = 15)),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
+        panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")
+        )
+```
+
+```{r}
+# bar chart for counts by spartina zone
+stem_animals %>%
+  filter(year != 2013) %>%
+  mutate(spartina_zone_name = case_when(spartina_zone == "S" ~ "Short",
+                                        spartina_zone == "M" ~ "Medium",
+                                        spartina_zone == "T" ~ "Tall"),
+         spartina_zone = factor(spartina_zone_name, levels = c("Short", "Medium", "Tall"))) %>%
+  select(month, year, date, littoraria_count, spartina_zone) %>%
+  group_by(spartina_zone) %>%
+  summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE)) %>%
+  ggplot(., aes(x = spartina_zone, y = littoraria_count)) +
+  geom_col(fill = "darkgreen", color = "black") +
+  theme_bw() +
+  labs(x = expression(paste(italic("Spartina "), "Zone")),
+       y = expression(paste("# of ", italic("Littoraria")))) +
+  theme_minimal(base_family = "fira condensed") +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(margin = margin(r = 15)),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
+        panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")
+        )
+```
+
+```{r}
+snail_heatmap <- stem_animals %>%
+  filter(year != 2013) %>%
+  mutate(month_name = as.factor(month.name[month]),
+         month_name = factor(month_name, levels = month.name)) %>%
+  select(month, month_name, year, date, littoraria_count, spartina_zone) %>%
+  group_by(month_name, year) %>%
+  summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE))
+
+additional_data <- data.frame(
+  month_name = factor(c("June", "September", "October", "October", "November", "November"),
+                      levels = month.name),
+  year = factor(c(2019, 2017, 2018, 2019, 2016, 2021))
+)
+
+full_snail_heatmap <- full_join(snail_heatmap, additional_data)
+
+# plotting ----
+# add font family
+font_add_google(name = "Fira Sans", family = "fira")
+
+ggplot(full_snail_heatmap, aes(x = month_name, y = year, fill = littoraria_count, color = "")) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "#333333") +
+  scale_colour_manual(values=NA) +              
+  guides(colour = guide_legend("No data", override.aes=list(colour="#333333"))) +
+  labs(title = expression(paste(italic("Littoraria "), "Counts")),
+       x = "Month",
+       y = "Year",
+       fill = expression(paste(italic("Littoraria "), "Counts"))) +
+  theme_minimal(base_family = "fira condensed") +
+  theme(axis.line = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(margin = margin(r = 15))
+)
+```

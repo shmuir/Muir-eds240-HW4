@@ -1,7 +1,10 @@
 ---
 title: "HW2-exploration"
 author: "Sam Muir"
-format: html
+date: 2024-03-02
+format:
+  html:
+    embed-resources: true
 ---
 
 # Part 2a.
@@ -61,7 +64,7 @@ stemheight_clean <- stemheight %>%
 stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-to-many") %>% # join animals and stemheight
   mutate(year = as.factor(year(date)), # get year from the date
          month = as.factor(month(date))) %>% # get month from the date
-  full_join(biomass_clean) # join with biomass
+  full_join(biomass_clean)
 ```
 
 ## exploratory data viz
@@ -111,9 +114,8 @@ ggplot(stem_animals, aes(x = date, y = littoraria_count, color = spartina_zone))
   scale_color_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
 
 # biomass by spartina zone over time
-ggplot(biomass_clean, aes(x = date, y = biomass_aboveground_total, color = spartina_zone)) +
-  geom_line() +
-  facet_wrap(~spartina_zone, ncol = 1) +
+ggplot(stem_animals, aes(x = spartina_zone, y = biomass_aboveground_total, fill = year)) +
+  geom_boxplot() +
   scale_color_manual(values = c("seagreen", "cornflowerblue", "magenta4"))
 ```
 
