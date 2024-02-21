@@ -15,6 +15,7 @@ library(tidyverse)
 library(janitor)
 library(ggtern)
 library(sf)
+library(sysfonts)
 ```
 
 ```{r}
@@ -130,20 +131,49 @@ full_snail_heatmap <- full_join(snail_heatmap, additional_data)
 # add font family
 font_add_google(name = "Fira Sans", family = "fira")
 
-ggplot(full_snail_heatmap, aes(x = month_name, y = year, fill = littoraria_count, color = "")) +
+ggplot(full_snail_heatmap, aes(x = month_name, y = year, fill = littoraria_count, color = "No data")) +
   geom_tile() +
-  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "#333333") +
-  scale_colour_manual(values=NA) +              
-  guides(colour = guide_legend("No data", override.aes=list(colour="#333333"))) +
-  labs(title = expression(paste(italic("Littoraria "), "Counts")),
+  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "grey") +
+  scale_colour_manual(values = c("No data" = "grey"), guide = "none") +  # Remove legend for color aesthetic
+  guides(fill = guide_legend(override.aes = list(color = "grey"))) +  # Adjust color in legend
+  labs(title = "Counts of the Marsh Periwinkle snail near the Georgia Coastal Ecosystem LTER Flux Tower",
        x = "Month",
        y = "Year",
-       fill = expression(paste(italic("Littoraria "), "Counts"))) +
+       fill = "Snail Counts") +
   theme_minimal(base_family = "fira condensed") +
   theme(axis.line = element_blank(),
         panel.grid = element_blank(),
         panel.border = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.y = element_text(margin = margin(r = 15))
+        axis.title.y = element_text(margin = margin(r = 15)),
+        plot.title = element_text(size = 18)
 )
 ```
+
+```{r}
+ggplot(full_snail_heatmap) +
+  geom_tile(aes(x = month_name, y = year, fill = littoraria_count), color = "slategrey") +
+  scale_fill_gradient(low = "white", high = "darkgreen") +
+  new_scale_color() +
+  geom_tile(data = subset(full_snail_heatmap, is.na(littoraria_count)),
+            aes(x = month_name, y = year, color = "slategrey"), fill = "grey", linewidth = 0) +
+  labs(title = "Marsh Periwinkle Snail Counts", 
+       subtitle = "at the Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)",
+       x = "",
+       y = "Year",
+       fill = "Snail Counts",
+       color = "No Data") +
+  theme_minimal(base_family = "fira condensed") +
+  theme(axis.line = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(margin = margin(r = 16), size = 17),
+        plot.title = element_text(size = 26, hjust = 0.5),  # Center the title
+        plot.subtitle = element_text(hjust = 0.5)) +
+  guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
+```
+
+
+
