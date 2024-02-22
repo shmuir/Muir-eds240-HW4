@@ -13,9 +13,9 @@ format:
 # libraries
 library(tidyverse)
 library(janitor)
-library(ggtern)
 library(sf)
 library(sysfonts)
+library(scales)
 ```
 
 ```{r}
@@ -40,13 +40,6 @@ biomass_clean <- biomass %>%
   mutate_at(c("spartina_zone", "replicate"), as.factor) %>% # change cols to factor
   mutate(date = lubridate::as_date(date)) # change date to a date
 
-vegetation_clean <- vegetation %>%
-  clean_names() %>%
-  mutate_at(c("latitude", "longitude", "plant_height"), as.numeric) %>% # change cols to numeric
-  mutate_at(c("spartina_zone", "plot_number", "quadrat_area", "flowering_status"), as.factor) %>% # change cols to factor
-  mutate(date = lubridate::as_date(date), # change date to a date
-         year = as.factor(year(date))) # get the year from the date, change to a factor
-
 stemheight_clean <- stemheight %>%
   clean_names() %>%
   mutate_at(c("spartina_zone"), as.factor) %>% # change cols to factor
@@ -64,12 +57,14 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 
 ```{r}
 # line plot for counts over the years
-stem_animals %>%
-  group_by(year) %>%
-  summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>%
-  drop_na(year) %>%
+snail_plotting <- stem_animals %>%
   filter(year != 2013) %>%
-ggplot(., aes(x = year, y = counts, group = 1)) +
+  mutate(year_month = format(date, "%y/%m")) %>%
+  group_by(year_month) %>%
+  summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>%
+  mutate(year_month = ym(year_month))
+
+ggplot(snail_plotting, aes(x = year_month, y = counts, group = 1)) +
   geom_point(color = "darkgreen") +
   geom_line(color = "darkgreen") +
   theme_bw() +
@@ -96,10 +91,10 @@ stem_animals %>%
   group_by(spartina_zone) %>%
   summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE)) %>%
   ggplot(., aes(x = spartina_zone, y = littoraria_count)) +
-  geom_col(fill = "darkgreen", color = "black") +
+  geom_col(fill = "#455D44", color = "black") +
   theme_bw() +
-  labs(x = expression(paste(italic("Spartina "), "Zone")),
-       y = expression(paste("# of ", italic("Littoraria")))) +
+  labs(x = "Marsh Grass Height Zone",
+       y = "Marsh Periwinkle Count") +
   theme_minimal(base_family = "fira condensed") +
   theme(panel.grid = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -110,59 +105,96 @@ stem_animals %>%
         )
 ```
 
+
 ```{r}
-snail_heatmap <- stem_animals %>%
+# # prepare snail data for heatmap
+# snail_heatmap <- stem_animals %>%
+#   filter(year != 2013) %>%
+#   mutate(month_name = as.factor(month.name[month]),
+#          month_name = factor(month_name, levels = month.name)) %>%
+#   select(month, month_name, year, date, littoraria_count, spartina_zone) %>%
+#   group_by(month_name, year) %>%
+#   summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE))
+# 
+# additional_data <- data.frame(
+#   month_name = factor(c("June", "September", "October", "October", "November", "November"),
+#                       levels = month.name),
+#   year = factor(c(2019, 2017, 2018, 2019, 2016, 2021))
+# )
+# 
+# full_snail_heatmap <- full_join(snail_heatmap, additional_data)
+
+# prepare grasshopper data for heatmap
+invert_binary <- stem_animals %>%
   filter(year != 2013) %>%
   mutate(month_name = as.factor(month.name[month]),
-         month_name = factor(month_name, levels = month.name)) %>%
-  select(month, month_name, year, date, littoraria_count, spartina_zone) %>%
+         month_name = factor(month_name, levels = month.name),
+         grasshopper_abundance_index = as.numeric(grasshopper_abundance_index),
+         day = day(date)) %>%
+  select(month, month_name, year, date, grasshopper_abundance_index, plot_number) %>%
   group_by(month_name, year) %>%
-  summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE))
+  summarise(max_grasshopper = max(grasshopper_abundance_index)) %>%
+  mutate(max_grasshopper = as.factor(max_grasshopper))
 
-additional_data <- data.frame(
-  month_name = factor(c("June", "September", "October", "October", "November", "November"),
-                      levels = month.name),
-  year = factor(c(2019, 2017, 2018, 2019, 2016, 2021))
+additional_data2 <- data.frame(
+  month_name = factor(c("February", "June", "September", "October", "October", "November", "November"),
+                      levels = month.name), year = factor(c(2020, 2019, 2017, 2018, 2019, 2016, 2021))
 )
 
-full_snail_heatmap <- full_join(snail_heatmap, additional_data)
+grasshopper_heatmap <- full_join(invert_binary, additional_data2)
 
-# plotting ----
-# add font family
-font_add_google(name = "Fira Sans", family = "fira")
+# prepare planthopper data for heat map
 
-ggplot(full_snail_heatmap, aes(x = month_name, y = year, fill = littoraria_count, color = "No data")) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "grey") +
-  scale_colour_manual(values = c("No data" = "grey"), guide = "none") +  # Remove legend for color aesthetic
-  guides(fill = guide_legend(override.aes = list(color = "grey"))) +  # Adjust color in legend
-  labs(title = "Counts of the Marsh Periwinkle snail near the Georgia Coastal Ecosystem LTER Flux Tower",
-       x = "Month",
-       y = "Year",
-       fill = "Snail Counts") +
-  theme_minimal(base_family = "fira condensed") +
-  theme(axis.line = element_blank(),
-        panel.grid = element_blank(),
-        panel.border = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.y = element_text(margin = margin(r = 15)),
-        plot.title = element_text(size = 18)
-)
+planthopper_binary <- stem_animals %>%
+  filter(year != 2013) %>%
+  mutate(month_name = as.factor(month.name[month]),
+         month_name = factor(month_name, levels = month.name),
+         prokelisia_abundance_index = as.numeric(prokelisia_abundance_index),
+         day = day(date)) %>%
+  select(month, month_name, year, date, prokelisia_abundance_index, plot_number) %>%
+  group_by(month_name, year) %>%
+  summarise(max_planthopper = max(prokelisia_abundance_index)) %>%
+  mutate(max_planthopper = as.factor(max_planthopper))
+
+planthopper_heatmap <- full_join(planthopper_binary, additional_data2)
+
 ```
 
 ```{r}
-ggplot(full_snail_heatmap) +
-  geom_tile(aes(x = month_name, y = year, fill = littoraria_count), color = "slategrey") +
-  scale_fill_gradient(low = "white", high = "darkgreen") +
-  new_scale_color() +
-  geom_tile(data = subset(full_snail_heatmap, is.na(littoraria_count)),
-            aes(x = month_name, y = year, color = "slategrey"), fill = "grey", linewidth = 0) +
-  labs(title = "Marsh Periwinkle Snail Counts", 
+# ggplot(full_snail_heatmap) +
+#   geom_tile(aes(x = month_name, y = year, fill = littoraria_count), color = "slategrey") +
+#   scale_fill_gradient(low = "white", high = "purple4") +
+#   ggnewscale::new_scale_color() +
+#   geom_tile(data = subset(full_snail_heatmap, is.na(littoraria_count)),
+#             aes(x = month_name, y = year, color = "slategrey"), fill = "grey", linewidth = 0) +
+#   labs(title = "Marsh Periwinkle Snail Counts", 
+#        subtitle = "at the Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)",
+#        x = "",
+#        y = "Year",
+#        fill = "Snail Counts",
+#        color = "No Data") +
+#   theme_minimal(base_family = "fira condensed") +
+#   theme(axis.line = element_blank(),
+#         panel.grid = element_blank(),
+#         panel.border = element_blank(),
+#         axis.text.x = element_text(angle = 45, hjust = 1, size = 13),
+#         axis.text.y = element_text(size = 13),
+#         axis.title.y = element_text(margin = margin(r = 16), size = 17),
+#         plot.title = element_text(size = 26, hjust = 0.5),  # Center the title
+#         plot.subtitle = element_text(hjust = 0.5)) +
+#   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
+```
+
+
+```{r}
+ggplot(grasshopper_heatmap) +
+  geom_tile(aes(x = month_name, y = year, fill = max_grasshopper), color = "black") +
+  scale_fill_manual(values = c("#DFE3CE","#BDCFA1","#455D44", "#23341E"), labels = c("Rare", "Common", "Abundant", "Very Abundant")) +
+  labs(title = "Grasshopper Presence", 
        subtitle = "at the Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)",
        x = "",
        y = "Year",
-       fill = "Snail Counts",
-       color = "No Data") +
+       fill = "Grasshopper Presence") +
   theme_minimal(base_family = "fira condensed") +
   theme(axis.line = element_blank(),
         panel.grid = element_blank(),
@@ -175,5 +207,24 @@ ggplot(full_snail_heatmap) +
   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
 ```
 
-
+```{r}
+ggplot(planthopper_heatmap) +
+  geom_tile(aes(x = month_name, y = year, fill = max_planthopper), color = "black") +
+  scale_fill_manual(values = c("white","#DFE3CE","#BDCFA1","#455D44", "#23341E"), labels = c("Absent","Rare", "Common", "Abundant", "Very Abundant")) +
+  labs(title = "Planthopper Presence", 
+       subtitle = "at the Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)",
+       x = "",
+       y = "Year",
+       fill = "Planthopper Presence") +
+  theme_minimal(base_family = "fira condensed") +
+  theme(axis.line = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(margin = margin(r = 16), size = 17),
+        plot.title = element_text(size = 26, hjust = 0.5),  # Center the title
+        plot.subtitle = element_text(hjust = 0.5)) +
+  guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
+```
 
