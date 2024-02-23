@@ -241,11 +241,3 @@ ggplot(full_heatmap_data) +
         plot.subtitle = element_text(hjust = 0.5, size = 17),
         strip.text = element_text(size = 13)) 
 ```
-
-
-```{r}
-((grasshopper_plot + planthopper_plot) / (line_chart + bar_chart))
-
-(line_chart) / (((grasshopper_plot / planthopper_plot) | (bar_chart))) + plot_layout(ncol = 3, nrow = 2)
-```
-
