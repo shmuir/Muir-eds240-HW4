@@ -38,6 +38,9 @@ https://www.data-to-viz.com/graph/line.html
 - experiment with colors and typefaces / fonts
 - create a presentable / aesthetically-pleasing theme (e.g. (re)move gridlines / legends as appropriate, adjust font sizes, etc.)
 
+```{r, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
 
 ```{r, libraries, message=FALSE}
 # libraries
@@ -86,61 +89,7 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
   full_join(biomass_clean)
 ```
 
-# Plots
-
-```{r}
-# line plot for counts over the years
-
-# data prep
-snail_plotting <- stem_animals %>%
-  filter(year != 2013) %>%
-  mutate(year_month = format(date, "%y/%m")) %>%
-  group_by(year_month) %>%
-  summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>%
-  mutate(year_month = ym(year_month))
-
-# plot
-ggplot(snail_plotting, aes(x = year_month, y = counts, group = 1)) +
-  geom_point(color = "darkgreen") +
-  geom_line(color = "darkgreen") +
-  theme_bw() +
-  labs(x = "Year", y = "Marsh Periwinkle Snail Count") +
-  theme_minimal(base_family = "fira condensed") +
-  theme(panel.grid = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.y = element_text(margin = margin(r = 15)),
-        axis.title.x = element_text(margin = margin(t = 15)),
-        panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
-        panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")
-        )
-```
-
-```{r}
-# bar chart for counts by spartina zone
-stem_animals %>%
-  filter(year != 2013) %>%
-  mutate(spartina_zone_name = case_when(spartina_zone == "S" ~ "Short",
-                                        spartina_zone == "M" ~ "Medium",
-                                        spartina_zone == "T" ~ "Tall"),
-         spartina_zone = factor(spartina_zone_name, levels = c("Short", "Medium", "Tall"))) %>%
-  select(month, year, date, littoraria_count, spartina_zone) %>%
-  group_by(spartina_zone) %>%
-  summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE)) %>%
-  ggplot(., aes(x = spartina_zone, y = littoraria_count)) +
-  geom_col(fill = "#455D44", color = "black") +
-  theme_bw() +
-  labs(x = "Marsh Grass Height Zone",
-       y = "Marsh Periwinkle Snail Count") +
-  theme_minimal(base_family = "fira condensed") +
-  theme(panel.grid = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.y = element_text(margin = margin(r = 15)),
-        axis.title.x = element_text(margin = margin(t = 15)),
-        panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
-        panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")
-        )
-```
-
+## Data preperation
 ```{r}
 # # prepare snail data for heatmap
 # snail_heatmap <- stem_animals %>%
@@ -159,33 +108,54 @@ stem_animals %>%
 # 
 # full_snail_heatmap <- full_join(snail_heatmap, additional_data)
 
-# prepare grasshopper data for heatmap
+# prepare grasshopper data for heatmap ----
 invert_binary <- stem_animals %>%
-  filter(year != 2013) %>%
-  mutate(month_name = as.factor(month.name[month]),
+  filter(year != 2013) %>% # data collection began par way through 2013
+  mutate(month_name = as.factor(month.name[month]), # adding the written out month name
          month_name = factor(month_name, levels = month.name),
-         grasshopper_abundance_index = as.character(grasshopper_abundance_index),
-         prokelisia_abundance_index = as.character(prokelisia_abundance_index),
-         grasshopper_abundance_index = as.numeric(grasshopper_abundance_index),
-         prokelisia_abundance_index = as.numeric(prokelisia_abundance_index),
-         day = day(date)) %>%
-  select(month, month_name, year, date, grasshopper_abundance_index, prokelisia_abundance_index) %>%
-  group_by(month_name, year) %>%
-  summarise(grasshopper = max(grasshopper_abundance_index),
-            planthopper = max(prokelisia_abundance_index),
-            grasshopper = as.factor(grasshopper),
-            planthopper = as.factor(planthopper))
+         grasshopper_abundance_index = as.character(grasshopper_abundance_index), # convert abundance to character
+         prokelisia_abundance_index = as.character(prokelisia_abundance_index), # convert abundance to numeric
+         grasshopper_abundance_index = as.numeric(grasshopper_abundance_index), # convert abundance to character
+         prokelisia_abundance_index = as.numeric(prokelisia_abundance_index)) %>% # convert abundance to numeric
+  select(month, month_name, year, date, grasshopper_abundance_index, prokelisia_abundance_index) %>% # select necessary columns
+  group_by(month_name, year) %>% # group to summarize counts 
+  summarise(Grasshopper = max(grasshopper_abundance_index), # find the max for each month of each year
+            Planthopper = max(prokelisia_abundance_index), # find the max for each month of each year
+            Grasshopper = as.factor(Grasshopper), # re-factor the max values
+            Planthopper = as.factor(Planthopper)) # re-factor
 
+# add missing months to the data to NAs rather than bank observations
 additional_data2 <- data.frame(
   month_name = factor(c("February", "June", "September", "October", "October", "November", "November"),
                       levels = month.name), year = factor(c(2020, 2019, 2017, 2018, 2019, 2016, 2021))
 )
 
+# join additional month data to abundance data and pivot to be able to facet
 full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
-  pivot_longer(cols = grasshopper:planthopper, names_to = "Animal",
+  pivot_longer(cols = Grasshopper:Planthopper, names_to = "Animal",
                values_to = "Abundance")
+
+# prepare data for bar chart by month ----
+snail_bar_month <- stem_animals %>%
+  filter(year != 2013) %>% # data collection began par way through 2013
+  mutate(month_name = as.factor(month.name[month]),
+         month_name = factor(month_name, levels = month.name)) %>%
+  select(month, month_name, year, date, littoraria_count) %>%
+  group_by(month_name) %>%
+  summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE))
+
+# data prep for line plot ----
+snail_plotting <- stem_animals %>%
+  filter(year != 2013) %>%
+  mutate(year_month = format(date, "%y/%m")) %>%
+  group_by(year_month) %>%
+  summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>%
+  mutate(year_month = ym(year_month))
 ```
 
+# Plots
+
+## plots I made but am not planning to use
 ```{r}
 # ggplot(full_snail_heatmap) +
 #   geom_tile(aes(x = month_name, y = year, fill = littoraria_count), color = "slategrey") +
@@ -209,9 +179,7 @@ full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
 #         plot.title = element_text(size = 26, hjust = 0.5),  # Center the title
 #         plot.subtitle = element_text(hjust = 0.5)) +
 #   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
-```
 
-```{r}
 # grasshopper_plot <- ggplot(grasshopper_heatmap) +
 #   geom_tile(aes(x = month_name, y = year, fill = max_grasshopper), color = "black") +
 #   scale_fill_manual(values = c("#DFE3CE","#BDCFA1","#455D44", "#23341E"), labels = c("Rare", "Common", "Abundant", "Very Abundant")) +
@@ -230,9 +198,7 @@ full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
 #         plot.title = element_text(size = 20, hjust = 0.5),  # Center the title
 #         plot.subtitle = element_text(hjust = 0.5, size = 17)) +
 #   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
-```
 
-```{r}
 # planthopper_plot <- ggplot(planthopper_heatmap) +
 #   geom_tile(aes(x = month_name, y = year, fill = max_planthopper), color = "black") +
 #   scale_fill_manual(values = c(0 = "white", 1 = "#DFE3CE", 2 = "#BDCFA1", 3 = "#455D44", 4 = "#23341E"), 
@@ -253,18 +219,22 @@ full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
 #   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
 ```
 
-```{r}
+## plots that I am going to use
+
+### heat map for grasshopper and plant hopper abundance
+```{r, fig.width=12, fig.height=6}
 ggplot(full_heatmap_data) +
   geom_tile(aes(x = month_name, y = year, fill = Abundance), color = "black") +
-  scale_fill_manual(values = c("white","#DFE3CE","#BDCFA1","#455D44", "#23341E"), 
-                    labels = c("Absent","Rare", "Common", "Abundant", "Very Abundant"),
+  scale_fill_manual(values = c("white","#DFE3CE","#BDCFA1","#455D44", "#23341E"),  # set color scale
+                    labels = c("Absent","Rare", "Common", "Abundant", "Very Abundant"), # change legend labels
                     na.value = "grey") +
   facet_wrap(~Animal) +
-  labs(title = "Invertebrate Animal Abundance at the\n Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)", 
+  labs(title = "How has Grasshopper and Planthopper Abundance changed at the\n Georgia Coastal Ecosystem LTER Flux Tower 2014-2022?", 
        x = "",
        y = "Year",
        fill = "Abundance") +
   theme_minimal(base_family = "fira condensed") +
+  # set theme options - adjust title, text, and grid lines
   theme(axis.line = element_blank(),
         panel.grid = element_blank(),
         panel.border = element_blank(),
@@ -274,6 +244,54 @@ ggplot(full_heatmap_data) +
         plot.title = element_text(size = 20, hjust = 0.5),  # Center the title
         plot.subtitle = element_text(hjust = 0.5, size = 17),
         strip.text = element_text(size = 13)) 
+```
+
+### line plot for snail counts over the time period plot (each point is total for that month)
+```{r}
+ggplot(snail_plotting, aes(x = year_month, y = counts, group = 1)) +
+  geom_point(color = "#455D44", size = 2) + # adjust color and point size
+  geom_line(color = "#455D44", size = 1) + # adjust color and linewidth
+  theme_bw() +
+  labs(x = "Year", y = "Marsh Periwinkle Snail Count",
+       title = "How has Marsh Periwinkle Snail Abundance changed at the\n Georgia Coastal Ecosystem LTER Flux Tower 2014-2022?") +
+  theme_minimal(base_family = "fira condensed") +
+  # set theme options - adjust title, text, and grid lines
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(margin = margin(r = 15)),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
+        panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")
+        )
+```
+
+### bar chart for snail counts by month
+```{r}
+ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
+  # add rectangle to indicate hatching season
+  geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, 
+                xmax = as.numeric(factor("August", levels = month.name)) + 0.5,
+                ymin = 0, ymax = 5200),
+            alpha = 0.1, fill = "grey", color = "black", size = 0.7) + # change fill and border 
+    geom_col(fill = "#455D44") +
+  scale_x_continuous(breaks = as.numeric(factor(month.name, levels = month.name)), labels = month.name) + # set x-axis labels to the month names
+  theme_bw() +
+  labs(x = "",
+       y = "Number of Marsh Periwinkle Snails\n(2014-2022)",
+       title = "How does Marsh Periwinkle Snail Abundance vary by at the\n Georgia Coastal Ecosystem LTER Flux Tower 2014-2022?") +
+  theme_minimal(base_family = "fira condensed") +
+# set theme - adjust axis lines, text size
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(margin = margin(r = 15)),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
+        panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")) +
+  annotate(geom = "text", # add text annotation to the rectangle indicator
+    x = 7, y = 5500, # adjust the positioning
+    label = "Snail egg hatching season",
+    size = 5, family = "fira condensed"
+  )
 ```
 
 7. Answer the following questions:
