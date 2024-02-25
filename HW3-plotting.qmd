@@ -13,30 +13,36 @@ format:
 
 2.  Restate your question(s). Has this changed at all since HW #1? If yes, how so?
 
--   My question has changed a bit as I've worked with the data more. I have landed on "How has the abundance of invertebrate animals changed over time at the Georgia Coastal Ecosystem LTER Flux Tower?". This is more focused on to one topic and I think will be easier to communicate than my previous question which encompassed too many factors. My sub-questions are:
+-   My question has changed a bit as I've worked with the data more. I have landed on "How has the abundance of invertebrate animals changed over time at the Georgia Coastal Ecosystem LTER Flux Tower?". This is more focused to one topic and I think will be easier to communicate than my previous question which encompassed too many factors. My sub-questions are:
     -   "How do grasshopper and planthopper abundances vary by year and month?"
     -   "How have Marsh Periwinkle Snail counts changed over time?"
-    -   "How do Marsh Periwinkle Snail counts 2014-2022 vary by Marsh Grass Height Zone?"
+    -   "In which months are Marsh Periwinkle Snails most abundant?"
 
 3.  Explain which variables from your data set(s) you will use to answer your question(s).
 
--   I have a couple of different data sets from the same study at the LTER site. I am going to use grasshopper_abundance_index (abundance classification for grasshoppers), prokelisia_abundance index (abundance classification for planthoppers), littoraria_count (Marsh Periwinkle Snail count), spartina_zone (height zone of the marsh grass), and date. After wrangling the data, I was able to join the ones I wanted to use. I calculated the maximum grasshopper and plant hopper abundance by taking the highest abundance for each month and year. This allows me to plot the abundance level for each year and month. For the snails, I was able to find the counts for each month over the different years so I can visualize the change in counts over time. I also calculated the total counts over the 2014-2022 time period for each of the three marsh grass height zones, so I can plot these total counts in the different zones.
+-   I have a couple of different data sets from the same study at the LTER site. I am going to use grasshopper_abundance_index (abundance classification for grasshoppers), prokelisia_abundance index (abundance classification for planthoppers), littoraria_count (Marsh Periwinkle Snail count), and date. After wrangling the data, I was able to join the ones I wanted to use. I calculated the maximum grasshopper and plant hopper abundance by taking the highest abundance for each month and year. This allows me to plot the abundance level for each year and month. For the snails, I was able to find the counts for each month over the different years so I can visualize the change in counts over time. I also calculated the total counts over the 2014-2022 time period for each month so I can find the months with the highest occurrences.
 
 4.  In HW #2, you should have created some exploratory data viz to better understand your data. You may already have some ideas of how you plan to formally visualize your data, but it's incredibly helpful to look at visualizations by other creators for inspiration. Find at least two data visualizations that you could (potentially) borrow / adapt pieces from. Link to them or download and embed them into your .qmd file, and explain which elements you might borrow (e.g. the graphic form, legend design, layout, etc.).
 
-https://github.com/doehm/tidytues?tab=readme-ov-file#week-10-numbats
+![https://github.com/doehm/tidytues?tab=readme-ov-file#week-10-numbats](photos/hatmap.png){width="594"}
 
-https://www.data-to-viz.com/graph/line.html
+-   This is the kind of heat map I want to make for the planthopper and grasshopper abundance plots, but since my data is factored, mine will not be a continuous scale.
 
-5. Hand-draw your anticipated three visualizations (option 1) or infographic (option 2). Take a photo of your drawing and embed it in your rendered .qmd file – note that these are not exploratory visualizations, but rather your plan for your final visualizations that you will eventually polish and submit with HW #4.
+![https://r-graphics.org/recipe-annotate-rect](photos/shaded_plot.png){width="599"}
 
-6. Mock up your visualizations using code. We understand that you will continue to iterate on these into HW #4 (particularly after receiving feedback), but by the end of HW #3, you should:
+-   I want to add a shaded region, like the rectangle on this plots, to my bar plot to show the months that the snail eggs typically hatch
 
-- have your data plotted (if you’re experimenting with an advanced graphic form(s) that were not explicitly covered in class, we understand that this may take some more time to build; you should have as much put together as possible)
-- use appropriate strategies to highlight / focus attention on a clear message
-- include appropriate text such as titles, captions, axis labels
-- experiment with colors and typefaces / fonts
-- create a presentable / aesthetically-pleasing theme (e.g. (re)move gridlines / legends as appropriate, adjust font sizes, etc.)
+5.  Hand-draw your anticipated three visualizations (option 1) or infographic (option 2). Take a photo of your drawing and embed it in your rendered .qmd file -- note that these are not exploratory visualizations, but rather your plan for your final visualizations that you will eventually polish and submit with HW #4.
+
+![](photos/drawings.jpg){width="500"}
+
+5.  Mock up your visualizations using code. We understand that you will continue to iterate on these into HW #4 (particularly after receiving feedback), but by the end of HW #3, you should:
+
+-   have your data plotted (if you're experimenting with an advanced graphic form(s) that were not explicitly covered in class, we understand that this may take some more time to build; you should have as much put together as possible)
+-   use appropriate strategies to highlight / focus attention on a clear message
+-   include appropriate text such as titles, captions, axis labels
+-   experiment with colors and typefaces / fonts
+-   create a presentable / aesthetically-pleasing theme (e.g. (re)move gridlines / legends as appropriate, adjust font sizes, etc.)
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
@@ -89,7 +95,8 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
   full_join(biomass_clean)
 ```
 
-## Data preperation
+## Data preparation
+
 ```{r}
 # # prepare snail data for heatmap
 # snail_heatmap <- stem_animals %>%
@@ -155,7 +162,8 @@ snail_plotting <- stem_animals %>%
 
 # Plots
 
-## plots I made but am not planning to use
+## Plots I made but am not planning to use
+
 ```{r}
 # ggplot(full_snail_heatmap) +
 #   geom_tile(aes(x = month_name, y = year, fill = littoraria_count), color = "slategrey") +
@@ -219,9 +227,10 @@ snail_plotting <- stem_animals %>%
 #   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
 ```
 
-## plots that I am going to use
+## Plots that I am going to use
 
 ### heat map for grasshopper and plant hopper abundance
+
 ```{r, fig.width=12, fig.height=6}
 ggplot(full_heatmap_data) +
   geom_tile(aes(x = month_name, y = year, fill = Abundance), color = "black") +
@@ -247,12 +256,13 @@ ggplot(full_heatmap_data) +
 ```
 
 ### line plot for snail counts over the time period plot (each point is total for that month)
+
 ```{r}
 ggplot(snail_plotting, aes(x = year_month, y = counts, group = 1)) +
   geom_point(color = "#455D44", size = 2) + # adjust color and point size
   geom_line(color = "#455D44", size = 1) + # adjust color and linewidth
   theme_bw() +
-  labs(x = "Year", y = "Marsh Periwinkle Snail Count",
+  labs(x = "Year", y = "Number of Marsh Periwinkle Snails",
        title = "How has Marsh Periwinkle Snail Abundance changed at the\n Georgia Coastal Ecosystem LTER Flux Tower 2014-2022?") +
   theme_minimal(base_family = "fira condensed") +
   # set theme options - adjust title, text, and grid lines
@@ -262,10 +272,12 @@ ggplot(snail_plotting, aes(x = year_month, y = counts, group = 1)) +
         axis.title.x = element_text(margin = margin(t = 15)),
         panel.grid.major.x = element_line(color = "grey50", linewidth = 0.25, linetype = "dotted"),
         panel.grid.major.y = element_line(color = "grey50", linetype = "dotted")
-        )
+        ) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
 ```
 
 ### bar chart for snail counts by month
+
 ```{r}
 ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   # add rectangle to indicate hatching season
@@ -278,7 +290,7 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   theme_bw() +
   labs(x = "",
        y = "Number of Marsh Periwinkle Snails\n(2014-2022)",
-       title = "How does Marsh Periwinkle Snail Abundance vary by at the\n Georgia Coastal Ecosystem LTER Flux Tower 2014-2022?") +
+       title = "How does Marsh Periwinkle Snail Abundance vary by month\n at the Georgia Coastal Ecosystem LTER Flux Tower?") +
   theme_minimal(base_family = "fira condensed") +
 # set theme - adjust axis lines, text size
   theme(panel.grid = element_blank(),
@@ -294,7 +306,13 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   )
 ```
 
-7. Answer the following questions:
-- What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R?
-- What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven’t covered in class that you’ll be learning how to use for your visualizations?
-- What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
+7.  Answer the following questions:
+
+-   What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R?
+    -   I had a hard time adding the shaded rectangle to the bar plot since my x-axis is categorical. Specifying just the month name would only draw the box to the tick mark for that month, which is only over half the bar, so it took a few different tests of code to get it where I wanted it. I think it might be a challenge to get the plots patchworked together in a way that doesn't make any of them look stretched or squished. As I'm putting them all together, I anticipate needing to change title sizes/ placements, and changing labels. I would also like to add a picture of each species, but I'm not sure where the best places will be yet.
+-   What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven't covered in class that you'll be learning how to use for your visualizations?
+    -   I am planning to use {patchwork}, but I might also use {cowplot} to arrange or add images to the plots. I don't think we've used cowplot much in class, but I have used it a little bit before, so I will be looking up more documentation for those functions.
+-   What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
+    -   Is it clear why I made a line plot and a bar plot for the snails? The idea is that I wanted to show counts over time vs counts per month (where, for example, the january value is the total sum of january counts for the entire time period)
+
+        -   I'm not sure if I need to clarify this in the titles better or if it makes sense as is
