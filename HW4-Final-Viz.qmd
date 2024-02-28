@@ -1,48 +1,11 @@
 ---
-title: "HW3: Drafting Viz"
+title: "HW4: Final Viz"
 author: "Sam Muir"
-date: 2024-02-24
+date: 2024-03-06
 format:
   html:
     embed-resources: true
 ---
-
-1.  Which option do you plan to pursue?
-
--   I am planning to make an infographic
-
-2.  Restate your question(s). Has this changed at all since HW #1? If yes, how so?
-
--   My question has changed a bit as I've worked with the data more. I have landed on "How has the abundance of invertebrate animals changed over time at the Georgia Coastal Ecosystem LTER Flux Tower?". This is more focused to one topic and I think will be easier to communicate than my previous question which encompassed too many factors (animals, biomass, and marsh grass height zone). My sub-questions are:
-    -   "How do grasshopper and planthopper abundances vary by year and month?"
-    -   "How have Marsh Periwinkle Snail counts changed over time?"
-    -   "In which months are Marsh Periwinkle Snails most abundant?"
-
-3.  Explain which variables from your data set(s) you will use to answer your question(s).
-
--   I have a couple of different data sets from the same study at the LTER site. I am going to use grasshopper_abundance_index (abundance classification for grasshoppers), prokelisia_abundance index (abundance classification for planthoppers), littoraria_count (Marsh Periwinkle Snail count), and date. After wrangling the data, I was able to join the ones I wanted to use. I calculated the maximum grasshopper and plant hopper abundance by taking the highest abundance for each month and year. This allows me to plot the abundance level for each year and month. For the snails, I was able to find the counts for each month over the different years so I can visualize the change in counts over time. I also calculated the total counts over the 2014-2022 time period for each month so I can find the months with the highest occurrences.
-
-4.  In HW #2, you should have created some exploratory data viz to better understand your data. You may already have some ideas of how you plan to formally visualize your data, but it's incredibly helpful to look at visualizations by other creators for inspiration. Find at least two data visualizations that you could (potentially) borrow / adapt pieces from. Link to them or download and embed them into your .qmd file, and explain which elements you might borrow (e.g. the graphic form, legend design, layout, etc.).
-
-![https://github.com/doehm/tidytues?tab=readme-ov-file#week-10-numbats](photos/hatmap.png){width="600"}
-
--   This is the kind of heat map I want to make for the planthopper and grasshopper abundance plots, but since my data is factored, mine will not be a continuous scale.
-
-![https://r-graphics.org/recipe-annotate-rect](photos/shaded_plot.png){width="600"}
-
--   I want to add a shaded region, like the rectangle on this plots, to my bar plot to show the months that the snail eggs typically hatch
-
-5.  Hand-draw your anticipated three visualizations (option 1) or infographic (option 2). Take a photo of your drawing and embed it in your rendered .qmd file -- note that these are not exploratory visualizations, but rather your plan for your final visualizations that you will eventually polish and submit with HW #4.
-
-![](photos/drawings.jpg){width="600"}
-
-5.  Mock up your visualizations using code. We understand that you will continue to iterate on these into HW #4 (particularly after receiving feedback), but by the end of HW #3, you should:
-
--   have your data plotted (if you're experimenting with an advanced graphic form(s) that were not explicitly covered in class, we understand that this may take some more time to build; you should have as much put together as possible)
--   use appropriate strategies to highlight / focus attention on a clear message
--   include appropriate text such as titles, captions, axis labels
--   experiment with colors and typefaces / fonts
--   create a presentable / aesthetically-pleasing theme (e.g. (re)move gridlines / legends as appropriate, adjust font sizes, etc.)
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
@@ -99,23 +62,6 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 ## Data preparation
 
 ```{r}
-# # prepare snail data for heatmap
-# snail_heatmap <- stem_animals %>%
-#   filter(year != 2013) %>%
-#   mutate(month_name = as.factor(month.name[month]),
-#          month_name = factor(month_name, levels = month.name)) %>%
-#   select(month, month_name, year, date, littoraria_count, spartina_zone) %>%
-#   group_by(month_name, year) %>%
-#   summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE))
-# 
-# additional_data <- data.frame(
-#   month_name = factor(c("June", "September", "October", "October", "November", "November"),
-#                       levels = month.name),
-#   year = factor(c(2019, 2017, 2018, 2019, 2016, 2021))
-# )
-# 
-# full_snail_heatmap <- full_join(snail_heatmap, additional_data)
-
 # prepare grasshopper data for heatmap ----
 invert_binary <- stem_animals %>%
   filter(year != 2013) %>% # data collection began par way through 2013
@@ -162,70 +108,6 @@ snail_plotting <- stem_animals %>%
 ```
 
 # Plots
-
-```{r, include = FALSE}
-## Plots I made but am not planning to use
-# ggplot(full_snail_heatmap) +
-#   geom_tile(aes(x = month_name, y = year, fill = littoraria_count), color = "slategrey") +
-#   scale_fill_gradient(low = "white", high = "purple4") +
-#   ggnewscale::new_scale_color() +
-#   geom_tile(data = subset(full_snail_heatmap, is.na(littoraria_count)),
-#             aes(x = month_name, y = year, color = "slategrey"), fill = "grey", linewidth = 0) +
-#   labs(title = "Marsh Periwinkle Snail Counts", 
-#        subtitle = "at the Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)",
-#        x = "",
-#        y = "Year",
-#        fill = "Snail Counts",
-#        color = "No Data") +
-#   theme_minimal(base_family = "fira condensed") +
-#   theme(axis.line = element_blank(),
-#         panel.grid = element_blank(),
-#         panel.border = element_blank(),
-#         axis.text.x = element_text(angle = 45, hjust = 1, size = 13),
-#         axis.text.y = element_text(size = 13),
-#         axis.title.y = element_text(margin = margin(r = 16), size = 17),
-#         plot.title = element_text(size = 26, hjust = 0.5),  # Center the title
-#         plot.subtitle = element_text(hjust = 0.5)) +
-#   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
-
-# grasshopper_plot <- ggplot(grasshopper_heatmap) +
-#   geom_tile(aes(x = month_name, y = year, fill = max_grasshopper), color = "black") +
-#   scale_fill_manual(values = c("#DFE3CE","#BDCFA1","#455D44", "#23341E"), labels = c("Rare", "Common", "Abundant", "Very Abundant")) +
-#   labs(title = "Invertebrate Animal Abundance at the\n Georgia Coastal Ecosystem LTER Flux Tower (2014-2022)", 
-#        subtitle = "Grasshopper",
-#        x = "",
-#        y = "Year",
-#        fill = "Abundance") +
-#   theme_minimal(base_family = "fira condensed") +
-#   theme(axis.line = element_blank(),
-#         panel.grid = element_blank(),
-#         panel.border = element_blank(),
-#         axis.text.x = element_text(angle = 45, hjust = 1, size = 13),
-#         axis.text.y = element_text(size = 13),
-#         axis.title.y = element_text(margin = margin(r = 16), size = 17),
-#         plot.title = element_text(size = 20, hjust = 0.5),  # Center the title
-#         plot.subtitle = element_text(hjust = 0.5, size = 17)) +
-#   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
-
-# planthopper_plot <- ggplot(planthopper_heatmap) +
-#   geom_tile(aes(x = month_name, y = year, fill = max_planthopper), color = "black") +
-#   scale_fill_manual(values = c(0 = "white", 1 = "#DFE3CE", 2 = "#BDCFA1", 3 = "#455D44", 4 = "#23341E"), 
-#                     labels = c("Absent","Rare", "Common", "Abundant", "Very Abundant")) +
-#   labs(subtitle = "Planthopper", 
-#        x = "",
-#        y = "Year",
-#        fill = "Abundance") +
-#   theme_minimal(base_family = "fira condensed") +
-#   theme(axis.line = element_blank(),
-#         panel.grid = element_blank(),
-#         panel.border = element_blank(),
-#         axis.text.x = element_text(angle = 45, hjust = 1, size = 13),
-#         axis.text.y = element_text(size = 13),
-#         axis.title.y = element_text(margin = margin(r = 16), size = 17),
-#         plot.title = element_text(size = 17, hjust = 0.5),  # Center the title
-#         plot.subtitle = element_text(hjust = 0.5, size = 17)) +
-#   guides(color = guide_legend(override.aes = list(fill = "grey"), label = FALSE))
-```
 
 ### Heat map for grasshopper and plant hopper abundance
 
@@ -285,6 +167,10 @@ ggplot(snail_plotting, aes(x = year_month, y = counts, group = 1)) +
 ### Bar chart for snail counts by month
 
 ```{r, fig.width=14, fig.height=9}
+
+snail_img <- png::readPNG(here::here("photos" ,"marsh_periwinkle.PNG"))
+snail_img <- grid::rasterGrob(snail_img)
+
 ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   # add rectangle to indicate hatching season
   geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, # adjust rectangle to go over the whole month
@@ -310,10 +196,16 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
         plot.title = element_markdown(size = 23, hjust = 0.5, family = "fira condensed"),
         plot.subtitle = element_text(size = 16, hjust = 0.5)) +
   annotate(geom = "text", # add text annotation to the rectangle indicator
-    x = 7, y = 5500, # adjust the positioning
-    label = "Snail egg hatching season",
-    size = 5, family = "fira condensed"
-  )
+    x = 7, y = 5400, # adjust the positioning
+    label = "bold(`Snail egg hatching season`)",
+    size = 5, family = "fira condensed", parse = TRUE
+  ) +
+  annotation_custom(snail_img, 
+                  xmin = as.numeric(factor("January", levels = month.name)) - 1.8, 
+                  xmax = as.numeric(factor("February", levels = month.name)), 
+                  ymin = 2000, 
+                  ymax = 8700) +
+coord_cartesian(clip = 'off')
 ```
 
 7.  Answer the following questions:
