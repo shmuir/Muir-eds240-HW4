@@ -87,7 +87,9 @@ additional_data2 <- data.frame(
 # join additional month data to abundance data and pivot to be able to facet
 full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
   pivot_longer(cols = Grasshopper:Planthopper, names_to = "Animal",
-               values_to = "Abundance")
+               values_to = "Abundance") %>%
+  mutate(Animal = case_when(Animal == "Grasshopper" ~ "Grasshopper (*Caelifera*) Aubundance",
+                            Animal == "Planthopper" ~ "Planthopper (*Prokelisia*) Abundance"))
 
 # prepare data for bar chart by month ----
 snail_bar_month <- stem_animals %>%
@@ -208,13 +210,80 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
 coord_cartesian(clip = 'off')
 ```
 
-7.  Answer the following questions:
+# viz w/out titles
+```{r}
 
--   What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R?
-    -   I had a hard time adding the shaded rectangle to the bar plot since my x-axis is categorical. Specifying just the month name would only draw the box to the tick mark for that month, which is only over half the bar, so it took a few different tests of code to get it where I wanted it. I think it might be a challenge to get the plots patchworked together in a way that doesn't make any of them look stretched or squished. As I'm putting them all together, I anticipate needing to change title sizes/ placements, and changing labels. I would also like to add a picture of each species, but I'm not sure where the best places will be yet.
--   What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven't covered in class that you'll be learning how to use for your visualizations?
-    -   I am planning to use {patchwork}, but I might also use {cowplot} to arrange or add images to the plots. I don't think we've used cowplot much in class, but I have used it a little bit before, so I will be looking up more documentation for those functions. It's also been a while since I've added an image to a plot so I will need to work on that as well. 
--   What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
-    -   Is it clear why I made a line plot and a bar plot for the snails? The idea is that I wanted to show counts over time vs counts per month (where, for example, the january value is the total sum of january counts for the entire time period)
+snail_img <- png::readPNG(here::here("photos" ,"marsh_periwinkle.PNG"))
+snail_img <- grid::rasterGrob(snail_img)
 
-        -   I'm not sure if I need to clarify this in the titles better or if it makes sense as is
+ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
+  # add rectangle to indicate hatching season
+  geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, # adjust rectangle to go over the whole month
+                xmax = as.numeric(factor("August", levels = month.name)) + 0.5, # adjust rectangle to go over the whole month
+                ymin = 0, ymax = 5200),
+            alpha = 0.1, fill = "grey", color = "black", size = 0.7) + # change fill and border 
+    geom_col(fill = "#455D44") +
+  scale_x_continuous(breaks = as.numeric(factor(month.name, levels = month.name)), labels = month.name) + # set x-axis labels to the month names
+  theme_bw() +
+  labs(x = "**Month**",
+       y = "**Cumulative Snail Counts<br>(2014-2022)**",
+       title = "**Marsh Periwinkle Snail**",
+       subtitle = "(*Littoraria irrorata*)") +
+  theme_minimal(base_family = "fira condensed") + # set theme
+# set theme - adjust axis lines, text size
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 28, color = "black"),
+        axis.text.y = element_text(size = 28, color = "black"),
+        axis.title.y = element_markdown(margin = margin(r = 15), size = 31),
+        axis.title.x = element_markdown(margin = margin(t = 15), size = 31),
+        panel.grid.major.y = element_line(color = "black", linetype = "dotted", linewidth = 1),
+        axis.line = element_line(color = "black"),
+        plot.title = element_markdown(size = 40, hjust = 0.5, family = "fira condensed"),
+        plot.subtitle = element_markdown(size = 28, hjust = 0.5)) +
+  annotate(geom = "text", # add text annotation to the rectangle indicator
+    x = 7, y = 5400, # adjust the positioning
+    label = "bold(`Snail egg hatching season`)",
+    size = 9, family = "fira condensed", parse = TRUE
+  ) 
+# +
+#   annotation_custom(snail_img, 
+#                   xmin = as.numeric(factor("January", levels = month.name)) - 1.8, 
+#                   xmax = as.numeric(factor("February", levels = month.name)), 
+#                   ymin = 2000, 
+#                   ymax = 8700) +
+# coord_cartesian(clip = 'off')
+
+ggplot(full_heatmap_data) +
+  geom_tile(aes(x = month_name, y = year, fill = Abundance), color = "black") +
+  scale_fill_manual(values = c("white","#DFE3CE","#BDCFA1","#455D44", "#23341E"),  # set color scale
+                    labels = c("Absent","Rare", "Common", "Abundant", "Very Abundant"), # change legend labels
+                    na.value = "grey") +
+  facet_wrap(~Animal, ncol = 1, scales = "free_x") + # one plot for each animal
+  labs(title = "", 
+       subtitle = "",
+       x = "**Month**",
+       y = "**Year**",
+       fill = "**Abundance**") +
+  theme_minimal(base_family = "fira condensed") +
+  # set theme options - adjust title, text, and grid lines
+  theme(axis.line = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 28, color = "black"),
+        axis.text.y = element_text(size = 28, color = "black"),
+        axis.title.y = element_markdown(margin = margin(r = 16), size = 31),
+        axis.title.x = element_markdown(margin = margin(t = 16), size = 31),
+        plot.title = element_markdown(size = 23, hjust = 0.5),  # Center the title
+        plot.subtitle = element_text(hjust = 0.5, size = 16),
+        legend.title = element_markdown(size = 31),
+        legend.text = element_text(size = 28),
+        strip.text = element_markdown(size = 28, face = "bold")) 
+```
+
+
+```{r}
+ggsave("periwinkleplot.png", width = 20, height = 15)
+ggsave("heatplot.png", width = 20, height = 18)
+
+```
+
