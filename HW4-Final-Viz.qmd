@@ -88,7 +88,7 @@ additional_data2 <- data.frame(
 full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
   pivot_longer(cols = Grasshopper:Planthopper, names_to = "Animal",
                values_to = "Abundance") %>%
-  mutate(Animal = case_when(Animal == "Grasshopper" ~ "Grasshopper (*Caelifera*) Aubundance",
+  mutate(Animal = case_when(Animal == "Grasshopper" ~ "Grasshopper (*Caelifera*) Abundance",
                             Animal == "Planthopper" ~ "Planthopper (*Prokelisia*) Abundance"))
 
 # prepare data for bar chart by month ----
@@ -258,7 +258,7 @@ ggplot(full_heatmap_data) +
   scale_fill_manual(values = c("white","#DFE3CE","#BDCFA1","#455D44", "#23341E"),  # set color scale
                     labels = c("Absent","Rare", "Common", "Abundant", "Very Abundant"), # change legend labels
                     na.value = "grey") +
-  facet_wrap(~Animal, ncol = 1, scales = "free_x") + # one plot for each animal
+  facet_wrap(~Animal, ncol = 2, scales = "free_x") + # one plot for each animal
   labs(title = "", 
        subtitle = "",
        x = "**Month**",
@@ -277,13 +277,87 @@ ggplot(full_heatmap_data) +
         plot.subtitle = element_text(hjust = 0.5, size = 16),
         legend.title = element_markdown(size = 31),
         legend.text = element_text(size = 28),
-        strip.text = element_markdown(size = 28, face = "bold")) 
+        strip.text = element_markdown(size = 28, face = "bold"),
+        legend.position = "bottom",
+        panel.spacing = unit(30, "pt")) +
+        guides(fill = guide_legend(nrow = 1))
 ```
 
 
 ```{r}
 ggsave("periwinkleplot.png", width = 20, height = 15)
-ggsave("heatplot.png", width = 20, height = 18)
+ggsave("heatplot.png", width = 27, height = 11)
 
+```
+
+
+```{r}
+library(raster)
+library(ggplot2)
+library(ggthemes)
+library(ggsn)
+
+
+mapdata <- getData("GADM", country = "usa", level = 1)
+mymap <- fortify(mapdata)
+
+mypoint <- data.frame(long = -81.28400, lat = 31.44986)
+
+
+
+
+g1 <- ggplot() +
+      geom_blank(data = mymap, aes(x=long, y=lat)) +
+      geom_map(data = mymap, map = mymap, 
+               aes(group = group, map_id = id),
+               fill = "grey85", color = "slategrey", size = 0.3) +
+      geom_point(data = mypoint, aes(x = long, y = lat),
+                 color = "#23341E", fill = "#23341E", size = 7) +
+      scale_x_continuous(limits = c(-85.9, -80), expand = c(0, 0)) +
+      scale_y_continuous(limits = c(30, 35.1), expand = c(0, 0)) +
+      theme_map()
+
+foo <- map_data("state")
+
+g2 <- ggplotGrob(
+        ggplot() +
+        geom_polygon(data = foo,
+                     aes(x = long, y = lat, group = group),
+                     fill = "grey85", color = "slategrey", size = 0.3) +
+        geom_point(data = mypoint, aes(x = long, y = lat),
+                   color = "#23341E", size = 4) +
+        coord_map("polyconic") +
+        theme_map() +
+        theme(panel.background = element_rect(fill = NULL))
+      )     
+
+g1 + annotation_custom(grob = g2, xmin = -83, xmax = -80,
+                        ymin = 28, ymax = 40) +
+  annotate(
+    geom = "segment",
+    x = -82, xend = -81.3,
+    y = 32.5, yend = 31.50,
+    arrow = arrow(length = unit(0.3, "cm")),
+    linewidth = 0.6, color = "black"
+  ) +
+  annotate(
+    geom = "text",
+    x = -82.3, y = 32.6,
+    label = "LTER Flux Tower",
+    hjust = "left",
+    size = 10,
+    family = "fira condensed"
+  ) +
+  annotate(
+    geom = "segment",
+    x = -82, xend = -80.88,
+    y = 32.7, yend = 33.6,
+    arrow = arrow(length = unit(0.3, "cm")),
+    linewidth = 0.6, color = "black"
+  )
+```
+
+```{r}
+ggsave("map.png", width = 15, height = 12)
 ```
 
