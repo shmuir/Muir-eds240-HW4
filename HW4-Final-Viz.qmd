@@ -62,26 +62,28 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 ## Data preparation
 
 ```{r}
+month.name.short = c("Jan", "Feb", "Mar", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
+
 # prepare grasshopper data for heatmap ----
 invert_binary <- stem_animals %>%
   filter(year != 2013) %>% # data collection began par way through 2013
-  mutate(month_name = as.factor(month.name[month]), # adding the written out month name
-         month_name = factor(month_name, levels = month.name),
+  mutate(month_name = as.factor(month.name.short[month]), # adding the written out month name
+         month_name = factor(month_name, levels = month.name.short),
          grasshopper_abundance_index = as.character(grasshopper_abundance_index), # convert abundance to character
          prokelisia_abundance_index = as.character(prokelisia_abundance_index), # convert abundance to numeric
          grasshopper_abundance_index = as.numeric(grasshopper_abundance_index), # convert abundance to character
          prokelisia_abundance_index = as.numeric(prokelisia_abundance_index)) %>% # convert abundance to numeric
-  select(month, month_name, year, date, grasshopper_abundance_index, prokelisia_abundance_index) %>% # select necessary columns
+  dplyr::select(month, month_name, year, date, grasshopper_abundance_index, prokelisia_abundance_index) %>% # select necessary columns
   group_by(month_name, year) %>% # group to summarize counts 
   summarise(Grasshopper = max(grasshopper_abundance_index), # find the max for each month of each year
             Planthopper = max(prokelisia_abundance_index), # find the max for each month of each year
             Grasshopper = as.factor(Grasshopper), # re-factor the max values
             Planthopper = as.factor(Planthopper)) # re-factor
 
-# add missing months to the data to NAs rather than bank observations
+# add missing months to the data to NAs rather than blank observations
 additional_data2 <- data.frame(
-  month_name = factor(c("February", "June", "September", "October", "October", "November", "November"),
-                      levels = month.name), year = factor(c(2020, 2019, 2017, 2018, 2019, 2016, 2021))
+  month_name = factor(c("Feb", "June", "Sept", "Oct", "Oct", "Nov", "Nov"),
+                      levels = month.name.short), year = factor(c(2020, 2019, 2017, 2018, 2019, 2016, 2021))
 )
 
 # join additional month data to abundance data and pivot to be able to facet
@@ -96,7 +98,7 @@ snail_bar_month <- stem_animals %>%
   filter(year != 2013) %>% # data collection began par way through 2013
   mutate(month_name = as.factor(month.name[month]), # adding the written out month name
          month_name = factor(month_name, levels = month.name)) %>%
-  select(month, month_name, year, date, littoraria_count) %>% # select necessary cols
+  dplyr::select(month, month_name, year, date, littoraria_count) %>% # select necessary cols
   group_by(month_name) %>%
   summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE)) # find total time period counts per month
 
@@ -178,7 +180,7 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, # adjust rectangle to go over the whole month
                 xmax = as.numeric(factor("August", levels = month.name)) + 0.5, # adjust rectangle to go over the whole month
                 ymin = 0, ymax = 5200),
-            alpha = 0.1, fill = "grey", color = "black", size = 0.7) + # change fill and border 
+            alpha = 0.1, fill = "grey", size = 0.7) + # change fill and border 
     geom_col(fill = "#455D44") +
   scale_x_continuous(breaks = as.numeric(factor(month.name, levels = month.name)), labels = month.name) + # set x-axis labels to the month names
   theme_bw() +
@@ -221,9 +223,9 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, # adjust rectangle to go over the whole month
                 xmax = as.numeric(factor("August", levels = month.name)) + 0.5, # adjust rectangle to go over the whole month
                 ymin = 0, ymax = 5200),
-            alpha = 0.1, fill = "grey", color = "black", size = 0.7) + # change fill and border 
+            alpha = 0.1, fill = "grey", size = 0.7) + # change fill and border 
     geom_col(fill = "#455D44") +
-  scale_x_continuous(breaks = as.numeric(factor(month.name, levels = month.name)), labels = month.name) + # set x-axis labels to the month names
+  scale_x_continuous(breaks = as.numeric(factor(month.name.short, levels = month.name.short)), labels = month.name.short) + # set x-axis labels to the month names
   theme_bw() +
   labs(x = "**Month**",
        y = "**Cumulative Snail Counts<br>(2014-2022)**",
@@ -232,7 +234,7 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   theme_minimal(base_family = "fira condensed") + # set theme
 # set theme - adjust axis lines, text size
   theme(panel.grid = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 28, color = "black"),
+        axis.text.x = element_text(size = 28, color = "black"),
         axis.text.y = element_text(size = 28, color = "black"),
         axis.title.y = element_markdown(margin = margin(r = 15), size = 31),
         axis.title.x = element_markdown(margin = margin(t = 15), size = 31),
@@ -245,14 +247,8 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
     label = "bold(`Snail egg hatching season`)",
     size = 9, family = "fira condensed", parse = TRUE
   ) 
-# +
-#   annotation_custom(snail_img, 
-#                   xmin = as.numeric(factor("January", levels = month.name)) - 1.8, 
-#                   xmax = as.numeric(factor("February", levels = month.name)), 
-#                   ymin = 2000, 
-#                   ymax = 8700) +
-# coord_cartesian(clip = 'off')
 
+# heat map ----
 ggplot(full_heatmap_data) +
   geom_tile(aes(x = month_name, y = year, fill = Abundance), color = "black") +
   scale_fill_manual(values = c("white","#DFE3CE","#BDCFA1","#455D44", "#23341E"),  # set color scale
@@ -269,7 +265,7 @@ ggplot(full_heatmap_data) +
   theme(axis.line = element_blank(),
         panel.grid = element_blank(),
         panel.border = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 28, color = "black"),
+        axis.text.x = element_text(size = 28, color = "black"),
         axis.text.y = element_text(size = 28, color = "black"),
         axis.title.y = element_markdown(margin = margin(r = 16), size = 31),
         axis.title.x = element_markdown(margin = margin(t = 16), size = 31),
