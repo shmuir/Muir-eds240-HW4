@@ -62,7 +62,7 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 ## Data preparation
 
 ```{r}
-month.name.short = c("Jan", "Feb", "Mar", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
+month.name.short = c("Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
 
 # prepare grasshopper data for heatmap ----
 invert_binary <- stem_animals %>%
@@ -282,7 +282,7 @@ ggplot(full_heatmap_data) +
 
 ```{r}
 ggsave("periwinkleplot.png", width = 20, height = 15)
-ggsave("heatplot.png", width = 27, height = 11)
+ggsave("heatplot.png", width = 29, height = 11.5)
 
 ```
 
