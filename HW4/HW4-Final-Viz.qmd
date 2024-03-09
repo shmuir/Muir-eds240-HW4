@@ -24,10 +24,7 @@ library(ggtext)
 
 ```{r}
 # read in the data
-animals <- read_csv("data/animals/PLT-GCEM-1610_Animals_9_0.CSV", skip = 2)[-c(1,2),]
-biomass <- read_csv("data/biomass/PLT-GCEM-1610_Biomass_10_0.CSV", skip = 2)[-c(1,2),]
-vegetation <- read_csv("data/vegetation/PLT-GCEM-1610_Vegetation_9_0.CSV", skip = 2)[-c(1,2),]
-stemheight <- read_csv("data/stemheight/PLT-GCEM-1610_StemHeight_10_0.CSV", skip = 2)[-c(1,2),]
+animals <- read_csv(here::here("data", "animals", "PLT-GCEM-1610_Animals_9_0.CSV"), skip = 2)[-c(1,2),]
 ```
 
 ```{r, data cleaning, warning=FALSE, message=FALSE}
@@ -36,27 +33,9 @@ animals_clean <- animals %>%
   clean_names() %>%
   mutate_at(c("latitude", "longitude", "littoraria_count"), as.numeric) %>% # change cols to numeric
   mutate_at(c("grasshopper_abundance_index", "prokelisia_abundance_index", "littoraria_quadrat_area", "plot_number", "spartina_zone"), as.factor) %>% # change cols to factor
-  mutate(date = lubridate::as_date(date)) # change date to a date
-
-biomass_clean <- biomass %>%
-  clean_names() %>%
-  mutate_at(c("biomass_aboveground_green", "biomass_aboveground_brown", "biomass_aboveground_total", "biomass_belowground_0to10cm", "biomass_belowground_10to30cm", "biomass_belowground_total", "rhizomes_0to10cm", "root_to_shoot_ratio"), as.numeric) %>% # change cols to numeric
-  mutate_at(c("spartina_zone", "replicate"), as.factor) %>% # change cols to factor
-  mutate(date = lubridate::as_date(date)) # change date to a date
-
-stemheight_clean <- stemheight %>%
-  clean_names() %>%
-  mutate_at(c("spartina_zone"), as.factor) %>% # change cols to factor
-  mutate_at(c("core_number", "stem_number", "stem_height"), as.numeric) %>% # change cols to numeric
-  mutate(date = lubridate::as_date(date))
-
-## maybe there was a better way to do all of this? but seems like good practice either way 
-
-# joining some of the data frames
-stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-to-many") %>% # join animals and stemheight
-  mutate(year = as.factor(year(date)), # get year from the date
-         month = as.factor(month(date))) %>% # get month from the date
-  full_join(biomass_clean)
+  mutate(date = lubridate::as_date(date),
+         year = as.factor(year(date)), # get year from the date
+         month = as.factor(month(date))) # change date to a date
 ```
 
 ## Data preparation
@@ -65,7 +44,7 @@ stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-
 month.name.short = c("Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
 
 # prepare grasshopper data for heatmap ----
-invert_binary <- stem_animals %>%
+invert_binary <- animals_clean %>%
   filter(year != 2013) %>% # data collection began par way through 2013
   mutate(month_name = as.factor(month.name.short[month]), # adding the written out month name
          month_name = factor(month_name, levels = month.name.short),
@@ -94,7 +73,7 @@ full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
                             Animal == "Planthopper" ~ "**Planthopper**<br>(*Prokelisia*)"))
 
 # prepare data for bar chart by month ----
-snail_bar_month <- stem_animals %>%
+snail_bar_month <- animals_clean %>%
   filter(year != 2013) %>% # data collection began par way through 2013
   mutate(month_name = as.factor(month.name[month]), # adding the written out month name
          month_name = factor(month_name, levels = month.name)) %>%
@@ -103,13 +82,18 @@ snail_bar_month <- stem_animals %>%
   summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE)) # find total time period counts per month
 
 # data prep for line plot ----
-snail_plotting <- stem_animals %>%
+snail_plotting <- animals_clean %>%
   filter(year != 2013) %>%
   mutate(year_month = format(date, "%y/%m")) %>% # format into year month
   group_by(year_month) %>%
   summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>% # find the sum for each month
   mutate(year_month = ym(year_month)) # get the year month
+
+# save cleaned data
+# write_csv(snail_bar_month, "snail_clean.csv")
+# write_csv(full_heatmap_data, "hopper_clean.csv")
 ```
+
 
 # Plots
 
@@ -215,10 +199,7 @@ coord_cartesian(clip = 'off')
 
 # viz w/out titles
 ```{r}
-
-snail_img <- png::readPNG(here::here("photos" ,"marsh_periwinkle.PNG"))
-snail_img <- grid::rasterGrob(snail_img)
-
+# bar plot----
 ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   # add rectangle to indicate hatching season
   geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, # adjust rectangle to go over the whole month
@@ -248,7 +229,10 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
     label = "bold(`Snail egg hatching season`)",
     size = 9, family = "fira condensed", parse = TRUE
   ) 
+```
 
+
+```{r}
 # heat map ----
 ggplot(full_heatmap_data) +
   geom_tile(aes(x = month_name, y = year, fill = Abundance), color = "black") +
@@ -275,11 +259,15 @@ ggplot(full_heatmap_data) +
         legend.title = element_markdown(size = 33),
         legend.text = element_text(size = 30),
         strip.text = element_markdown(size = 40),
-        panel.spacing = unit(30, "pt"))
+        panel.spacing = unit(30, "pt"),
+        legend.key.width = unit(2.5, "cm"),
+        legend.key.height = unit(2.5, "cm"),
+        legend.background = element_rect(fill=alpha('#C8D8DE', 1),
+                                         color = "#C8D8DE"))
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 ggsave("plots/periwinkleplot.png", width = 20, height = 15)
 ggsave("plots/heatplot.png", width = 20, height = 25)
 
@@ -293,7 +281,7 @@ mypoint <- data.frame(long = -81.28400, lat = 31.44986)
 
 
 ggplot() +
-  geom_polygon( data=all_states, aes(x=long, y=lat, group = group),colour="white", fill="grey" ) +
+  geom_polygon(data=all_states, aes(x=long, y=lat, group = group),colour="white", fill="grey" ) +
   geom_polygon(data = ga, aes(x=long, y=lat, group = group),fill="seagreen") +
   geom_point(data = mypoint, aes(x = long, y = lat),
                    color = "#23341E", size = 4, shape = 23, fill = "purple") +
@@ -302,7 +290,7 @@ ggplot() +
 
 
 
-```{r}
+```{r, eval=FALSE}
 ggsave("plots/map.png", width = 15, height = 10)
 ```
 
