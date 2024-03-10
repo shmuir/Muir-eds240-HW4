@@ -24,7 +24,10 @@ library(ggtext)
 
 ```{r}
 # read in the data
-animals <- read_csv(here::here("data", "animals", "PLT-GCEM-1610_Animals_9_0.CSV"), skip = 2)[-c(1,2),]
+animals <- read_csv("data/animals/PLT-GCEM-1610_Animals_9_0.CSV", skip = 2)[-c(1,2),]
+biomass <- read_csv("data/biomass/PLT-GCEM-1610_Biomass_10_0.CSV", skip = 2)[-c(1,2),]
+vegetation <- read_csv("data/vegetation/PLT-GCEM-1610_Vegetation_9_0.CSV", skip = 2)[-c(1,2),]
+stemheight <- read_csv("data/stemheight/PLT-GCEM-1610_StemHeight_10_0.CSV", skip = 2)[-c(1,2),]
 ```
 
 ```{r, data cleaning, warning=FALSE, message=FALSE}
@@ -33,9 +36,27 @@ animals_clean <- animals %>%
   clean_names() %>%
   mutate_at(c("latitude", "longitude", "littoraria_count"), as.numeric) %>% # change cols to numeric
   mutate_at(c("grasshopper_abundance_index", "prokelisia_abundance_index", "littoraria_quadrat_area", "plot_number", "spartina_zone"), as.factor) %>% # change cols to factor
-  mutate(date = lubridate::as_date(date),
-         year = as.factor(year(date)), # get year from the date
-         month = as.factor(month(date))) # change date to a date
+  mutate(date = lubridate::as_date(date)) # change date to a date
+
+biomass_clean <- biomass %>%
+  clean_names() %>%
+  mutate_at(c("biomass_aboveground_green", "biomass_aboveground_brown", "biomass_aboveground_total", "biomass_belowground_0to10cm", "biomass_belowground_10to30cm", "biomass_belowground_total", "rhizomes_0to10cm", "root_to_shoot_ratio"), as.numeric) %>% # change cols to numeric
+  mutate_at(c("spartina_zone", "replicate"), as.factor) %>% # change cols to factor
+  mutate(date = lubridate::as_date(date)) # change date to a date
+
+stemheight_clean <- stemheight %>%
+  clean_names() %>%
+  mutate_at(c("spartina_zone"), as.factor) %>% # change cols to factor
+  mutate_at(c("core_number", "stem_number", "stem_height"), as.numeric) %>% # change cols to numeric
+  mutate(date = lubridate::as_date(date))
+
+## maybe there was a better way to do all of this? but seems like good practice either way 
+
+# joining some of the data frames
+stem_animals <- full_join(animals_clean, stemheight_clean, relationship = "many-to-many") %>% # join animals and stemheight
+  mutate(year = as.factor(year(date)), # get year from the date
+         month = as.factor(month(date))) %>% # get month from the date
+  full_join(biomass_clean)
 ```
 
 ## Data preparation
@@ -44,7 +65,7 @@ animals_clean <- animals %>%
 month.name.short = c("Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
 
 # prepare grasshopper data for heatmap ----
-invert_binary <- animals_clean %>%
+invert_binary <- stem_animals %>%
   filter(year != 2013) %>% # data collection began par way through 2013
   mutate(month_name = as.factor(month.name.short[month]), # adding the written out month name
          month_name = factor(month_name, levels = month.name.short),
@@ -73,7 +94,7 @@ full_heatmap_data <- full_join(invert_binary, additional_data2) %>%
                             Animal == "Planthopper" ~ "**Planthopper**<br>(*Prokelisia*)"))
 
 # prepare data for bar chart by month ----
-snail_bar_month <- animals_clean %>%
+snail_bar_month <- stem_animals %>%
   filter(year != 2013) %>% # data collection began par way through 2013
   mutate(month_name = as.factor(month.name[month]), # adding the written out month name
          month_name = factor(month_name, levels = month.name)) %>%
@@ -82,18 +103,18 @@ snail_bar_month <- animals_clean %>%
   summarise(littoraria_count = sum(littoraria_count, na.rm = TRUE)) # find total time period counts per month
 
 # data prep for line plot ----
-snail_plotting <- animals_clean %>%
+snail_plotting <- stem_animals %>%
   filter(year != 2013) %>%
   mutate(year_month = format(date, "%y/%m")) %>% # format into year month
   group_by(year_month) %>%
   summarise(counts = sum(littoraria_count, na.rm = TRUE)) %>% # find the sum for each month
   mutate(year_month = ym(year_month)) # get the year month
-
-# save cleaned data
-# write_csv(snail_bar_month, "snail_clean.csv")
-# write_csv(full_heatmap_data, "hopper_clean.csv")
 ```
 
+```{r}
+write_csv(snail_bar_month, "snail_clean.csv")
+write_csv(full_heatmap_data, "hopper_clean.csv")
+```
 
 # Plots
 
@@ -164,7 +185,7 @@ ggplot(snail_bar_month, aes(x = as.numeric(month_name), y = littoraria_count)) +
   geom_rect(aes(xmin = as.numeric(factor("June", levels = month.name)) - 0.5, # adjust rectangle to go over the whole month
                 xmax = as.numeric(factor("August", levels = month.name)) + 0.5, # adjust rectangle to go over the whole month
                 ymin = 0, ymax = 5200),
-            alpha = 0.1, fill = "grey", size = 0.7) + # change fill and border 
+            alpha = 0.1, fill = "5200", size = 0.7) + # change fill and border 
     geom_col(fill = "#455D44") +
   scale_x_continuous(breaks = as.numeric(factor(month.name, levels = month.name)), labels = month.name) + # set x-axis labels to the month names
   theme_bw() +
